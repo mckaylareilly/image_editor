@@ -21,7 +21,7 @@ Ensure you have the following installed:
 - **Node.js** `23.7.0`
 - **npm** (included with Node)
 
-### 🔧 Backend Setup (Rails API)
+### Backend Setup (Rails API)
 Install Ruby 3.4.2 and install Rails 8.0.1
 ```sh
 cd image_editor_backend
