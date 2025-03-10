@@ -5,6 +5,7 @@ export default function Library() {
   const [pairedImages, setPairedImages] = useState([]);  
   const [loading, setLoading] = useState(true);  
 
+  // Call the transformed images API to index transformed images and their associated original image
   useEffect(() => {
     const fetchTransformedImages = async () => {
       try {

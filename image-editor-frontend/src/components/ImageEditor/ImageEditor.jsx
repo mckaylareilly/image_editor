@@ -5,6 +5,7 @@ import FillImage from "./FillImage";
 import ExpandImage from "./ExpandImage"; // Assuming you have these components
 
 export default function ImageEditor({ imageUrl, uploadedImageId, originalImageId }) {
+  // Setup tabs for the ImageEditor components
   const tabs = [
     {
       id: 1,

@@ -1,53 +1,61 @@
 import { Heading, View, FileTrigger, Button, Flex, Text } from "@adobe/react-spectrum";
 import { useState } from "react";
 
-export default function ImageUpload({ setImageUrl, setUploadedImageId, setOriginalImageId }) { // Accept setUploadedImageId as a prop
+export default function ImageUpload({ setImageUrl, setUploadedImageId, setOriginalImageId }) {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState(null);
+  const [errorMessage, setErrorMessage] = useState("");
 
   const handleFileUpload = async (files) => {
     if (files.length === 0) return;
-  
+
     const file = files[0];
+
+    // Check if the file is an image
+    if (!file.type.startsWith("image/")) {
+      setErrorMessage("Please upload a valid image file.");
+      return;
+    }
+
     const formData = new FormData();
     formData.append("image[file]", file);
-  
+
     setIsUploading(true);
-  
+    setErrorMessage("");
+
+    // Call the Rails API to save an image
     try {
       const response = await fetch("http://localhost:3000/images", {
         method: "POST",
         body: formData,
       });
-  
+
       if (response.ok) {
         setUploadSuccess(true);
         const data = await response.json();
         setOriginalImageId(data.id);
         console.log("Image uploaded successfully:", data);
-  
-        setImageUrl(data.imageUrl); 
-  
+
+        setImageUrl(data.imageUrl);
+
+        // Call the Firefly API to upload image to Fireflu
         const fireflyResponse = await fetch("http://localhost:3000/upload_image", {
           method: "POST",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            imageUrl: data.imageUrl, 
+            imageUrl: data.imageUrl,
           }),
         });
-        
+
         if (fireflyResponse.ok) {
           const fireflyData = await fireflyResponse.json();
           console.log("Image sent to Firefly API for processing:", fireflyData);
-          
-          setUploadedImageId(fireflyData.image_id); 
-          
+          setUploadedImageId(fireflyData.image_id);
         } else {
           console.error("Failed to send image to Firefly API");
         }
-  
       } else {
         setUploadSuccess(false);
         console.error("Image upload failed");
@@ -77,7 +85,7 @@ export default function ImageUpload({ setImageUrl, setUploadedImageId, setOrigin
     >
       <Flex direction="column" alignItems="center" justifyContent="center" gap="size-200">
         <Heading level={3}>Upload an image</Heading>
-        <FileTrigger onSelect={handleFileUpload}>
+        <FileTrigger onSelect={handleFileUpload} accepts={["image/*"]}>
           <Button
             variant="accent"
             UNSAFE_style={{
@@ -91,6 +99,7 @@ export default function ImageUpload({ setImageUrl, setUploadedImageId, setOrigin
         <Text>Click the button to select a file.</Text>
         {uploadSuccess === true && <Text>Image uploaded successfully!</Text>}
         {uploadSuccess === false && <Text color="negative">Failed to upload image.</Text>}
+        {errorMessage && <Text color="negative">{errorMessage}</Text>}
       </Flex>
     </View>
   );

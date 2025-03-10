@@ -25,6 +25,7 @@ export default function FillImage({ uploadedImageId, originalImageId }) {
     setLoading(true);
     setError(null);
 
+    // Call the Rails API to fill an image
     try {
       const response = await fetch("http://localhost:3000/fill_image", {
         method: "POST",
@@ -62,6 +63,8 @@ export default function FillImage({ uploadedImageId, originalImageId }) {
     }
 
     setSaving(true);
+
+    // Call the Rails API to save tranformed image
     try {
       const response = await fetch("http://localhost:3000/transformed_images", {
         method: "POST",

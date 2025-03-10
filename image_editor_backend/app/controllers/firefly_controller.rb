@@ -38,7 +38,8 @@ class FireflyController < ApplicationController
           render json: { error: 'No image uploaded' }, status: :unprocessable_entity
           return
         end
-    
+        
+        # Setup the request
         content_type = blob.content_type
         url = URI.parse('https://firefly-api.adobe.io/v2/storage/image')
   
@@ -68,6 +69,7 @@ class FireflyController < ApplicationController
   
     # Generates an image using Firefly's API from a prompt and a reference image
     def generate_image
+        # Setup the HTTP request
         uri = URI.parse("https://firefly-api.adobe.io/v3/images/generate")
         http = Net::HTTP.new(uri.host, uri.port)
         http.use_ssl = true
@@ -115,8 +117,9 @@ class FireflyController < ApplicationController
         end
       end
 
-      #Expands the background of an image using Firefly's Expand API
+      # Expands the background of an image using Firefly's Expand API
       def expand_image
+        # Setup the HTTP request
         uri = URI.parse('https://firefly-api.adobe.io/v3/images/expand')
         permitted_params = params.require(:firefly).permit(:width, :height, :firefly_image_id)
         
@@ -148,6 +151,7 @@ class FireflyController < ApplicationController
       end
 
       def fill_image
+        # Setup the HTTP request
         uri = URI.parse('https://firefly-api.adobe.io/v3/images/fill')
         permitted_params = params.require(:firefly).permit(:mask_id, :source_id, :prompt)
       

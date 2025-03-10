@@ -17,6 +17,7 @@ export default function GenerateImage({ uploadedImageId, originalImageId }) {
     setLoading(true);
     setError(null);
 
+    // Call the Rails API to generate an image
     try {
       const response = await fetch("http://localhost:3000/generate_image", {
         method: "POST",
@@ -52,6 +53,8 @@ export default function GenerateImage({ uploadedImageId, originalImageId }) {
       }
 
     setSaving(true);
+
+    // Call the Rails API to save the transformed image
     try {
       const response = await fetch("http://localhost:3000/transformed_images", {
         method: "POST",

@@ -2,14 +2,17 @@ require 'open-uri'
 
 class TransformedImagesController < ApplicationController
     def create
+        # Open the ActiveStorage link and read the file
         url = params[:transformed_image][:file]
-        io = OpenURI.open_uri(url)  # Use OpenURI.open_uri here
-      
+        io = OpenURI.open_uri(url)
+        
+        # Create a transformed image with an associated original image
         @transformed_image = TransformedImage.new(image_id: params[:transformed_image][:image_id])
       
         # Attach the file
         @transformed_image.file.attach(io: io, filename: 'transformed_image.jpg') # Adjust filename as needed
-    
+        
+        # If file saves, redner a JSON with the transformed image info
         if @transformed_image.save
           render json: @transformed_image, status: :created
         else
@@ -28,11 +31,13 @@ class TransformedImagesController < ApplicationController
           { original_image_url: original_image_url, transformed_image_url: transformed_image_url }
         end
         
+        # Render a JSON with the URLs of each transformed image and associated original image
         render json: image_pairs
     end
   
     private
-  
+    
+    # Permit certain params for security reasons
     def image_params
         params.require(:transformed_image).permit(:file, :image_id)
     end
