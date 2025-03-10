@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { View, Image, Text, TextField, Button } from "@adobe/react-spectrum";
+import useSaveTransformedImage from "../../hooks/useSaveTransformedImage";
 
 export default function GenerateImage({ uploadedImageId, originalImageId }) {
   const [generatedImage, setGeneratedImage] = useState(null);
@@ -7,6 +8,8 @@ export default function GenerateImage({ uploadedImageId, originalImageId }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [prompt, setPrompt] = useState("");
+
+  const { saveTransformedImage, isSaving } = useSaveTransformedImage();
 
   const generateImage = async () => {
     if (!prompt) {
@@ -41,42 +44,6 @@ export default function GenerateImage({ uploadedImageId, originalImageId }) {
     }
   };
 
-  const saveImage = async () => {
-    if (!generatedImage) {
-        console.error("No generated image URL to save.");
-        return;
-      }
-    
-      if (!originalImageId) {
-        console.error("No original image ID found.");
-        return;
-      }
-
-    setSaving(true);
-
-    // Call the Rails API to save the transformed image
-    try {
-      const response = await fetch("http://localhost:3000/transformed_images", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-            transformed_image: {
-              file: generatedImage,  
-              image_id: originalImageId,
-            },
-          }),
-        });
-
-      if (!response.ok) throw new Error("Failed to save image");
-
-      alert("Image saved successfully!");
-    } catch (error) {
-      setError(`Error saving image: ${error.message}`);
-    } finally {
-      setSaving(false);
-    }
-  };
-
   return (
     <View marginTop="size-400" width="100%" maxWidth="500px" alignSelf="center">
       <TextField label="Enter a prompt" value={prompt} onChange={setPrompt} isRequired />
@@ -86,7 +53,7 @@ export default function GenerateImage({ uploadedImageId, originalImageId }) {
       
       <View marginTop="size-200" alignSelf="center">
         <Button onPress={generateImage} isDisabled={loading}>{loading ? "Generating..." : "Generate Image"}</Button>
-        {generatedImage && <Button onPress={saveImage} isDisabled={saving}>{saving ? "Saving..." : "Save Image"}</Button>}
+        {generatedImage && <Button onPress={() => saveTransformedImage(generatedImage, originalImageId)} isDisabled={saving}>{saving ? "Saving..." : "Save Image"}</Button>}
       </View>
     </View>
   );

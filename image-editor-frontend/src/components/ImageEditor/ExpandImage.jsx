@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { View, Image, Text, TextField, Button } from "@adobe/react-spectrum";
+import useSaveTransformedImage from "../../hooks/useSaveTransformedImage";
 
 export default function ExpandImage({ uploadedImageId, originalImageId }) {
   const [expandedImage, setExpandedImage] = useState(null);
@@ -8,6 +9,9 @@ export default function ExpandImage({ uploadedImageId, originalImageId }) {
   const [error, setError] = useState(null);
   const [width, setWidth] = useState("");
   const [height, setHeight] = useState("");
+
+  const { saveTransformedImage, isSaving } = useSaveTransformedImage();
+  
 
   const expandImage = async () => {
     if (!width || !height) {
@@ -42,41 +46,6 @@ export default function ExpandImage({ uploadedImageId, originalImageId }) {
     }
   };
 
-  const saveImage = async () => {
-    if (!expandedImage) {
-      console.error("No expanded image URL to save.");
-      return;
-    }
-
-    if (!originalImageId) {
-      console.error("No original image ID found.");
-      return;
-    }
-
-    setSaving(true);
-    // Call the Rails API to save the transformed image
-    try {
-      const response = await fetch("http://localhost:3000/transformed_images", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          transformed_image: {
-            file: expandedImage,  
-            image_id: originalImageId, 
-          },
-        }),
-      });
-
-      if (!response.ok) throw new Error("Failed to save image");
-
-      alert("Image saved successfully!");
-    } catch (error) {
-      setError(`Error saving image: ${error.message}`);
-    } finally {
-      setSaving(false);
-    }
-  };
-
   return (
     <View marginTop="size-400" width="100%" maxWidth="500px" alignSelf="center">
       <TextField label="Width" value={width} onChange={setWidth} isRequired />
@@ -87,7 +56,7 @@ export default function ExpandImage({ uploadedImageId, originalImageId }) {
       
       <View marginTop="size-200" alignSelf="center">
         <Button onPress={expandImage} isDisabled={loading}>{loading ? "Expanding..." : "Expand Image"}</Button>
-        {expandedImage && <Button onPress={saveImage} isDisabled={saving}>{saving ? "Saving..." : "Save Image"}</Button>}
+        {expandedImage && <Button onPress={() => saveTransformedImage(expandedImage, originalImageId)} isDisabled={saving}>{saving ? "Saving..." : "Save Image"}</Button>}
       </View>
     </View>
   );

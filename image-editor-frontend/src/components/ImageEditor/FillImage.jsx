@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { View, Image, Text, TextField, Button, Flex } from "@adobe/react-spectrum";
 import ImageUpload from "../ImageUpload";
+import useSaveTransformedImage from "../../hooks/useSaveTransformedImage";
 
 export default function FillImage({ uploadedImageId, originalImageId }) {
   const [filledImage, setFilledImage] = useState(null);
@@ -10,6 +11,8 @@ export default function FillImage({ uploadedImageId, originalImageId }) {
   const [prompt, setPrompt] = useState("");
   const [maskId, setMaskId] = useState(null);
   const [imageUrl, setImageUrl] = useState(null);
+  
+  const { saveTransformedImage, isSaving } = useSaveTransformedImage();
 
   // Update the maskId when a new image is uploaded through ImageUpload
   const handleMaskUpload = (id) => {
@@ -51,42 +54,6 @@ export default function FillImage({ uploadedImageId, originalImageId }) {
     }
   };
 
-  const saveImage = async () => {
-    if (!filledImage) {
-      console.error("No filled image URL to save.");
-      return;
-    }
-
-    if (!originalImageId) {
-      console.error("No original image ID found.");
-      return;
-    }
-
-    setSaving(true);
-
-    // Call the Rails API to save tranformed image
-    try {
-      const response = await fetch("http://localhost:3000/transformed_images", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          transformed_image: {
-            file: filledImage,
-            image_id: originalImageId,
-          },
-        }),
-      });
-
-      if (!response.ok) throw new Error("Failed to save image");
-
-      alert("Image saved successfully!");
-    } catch (error) {
-      setError(`Error saving image: ${error.message}`);
-    } finally {
-      setSaving(false);
-    }
-  };
-
   return (
     <View marginTop="size-400" width="100%" maxWidth="500px" alignSelf="center">
       <ImageUpload 
@@ -109,7 +76,7 @@ export default function FillImage({ uploadedImageId, originalImageId }) {
           {loading ? "Filling Image..." : "Fill Image"}
         </Button>
         {filledImage && (
-          <Button onPress={saveImage} isDisabled={saving}>
+          <Button onPress={() => saveTransformedImage(filledImage, originalImageId)} isDisabled={saving}>
             {saving ? "Saving..." : "Save Image"}
           </Button>
         )}
