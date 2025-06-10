@@ -1,30 +1,13 @@
-import React from 'react';
+import React from "react";
 import { View, Image, Flex, Heading, Tabs, TabList, TabPanels, Item } from "@adobe/react-spectrum";
 import GenerateImage from "./GenerateImage";
 import FillImage from "./FillImage";
-import ExpandImage from "./ExpandImage"; // Assuming you have these components
+import ExpandImage from "./ExpandImage";
+import PerformActions from "./PerformActions";
 
-export default function ImageEditor({ imageUrl, uploadedImageId, originalImageId }) {
-  // Setup tabs for the ImageEditor components
-  const tabs = [
-    {
-      id: 1,
-      name: 'Generate an Image from a Reference Photo',
-      children: <GenerateImage uploadedImageId={uploadedImageId} originalImageId={originalImageId} />
-    },
-    {
-      id: 2,
-      name: 'Fill Background',
-      children: <FillImage uploadedImageId={uploadedImageId} originalImageId={originalImageId} />
-    },
-    {
-      id: 3,
-      name: 'Expand Background',
-      children: <ExpandImage uploadedImageId={uploadedImageId} originalImageId={originalImageId} />
-    }
-  ];
-
-  const [tabId, setTabId] = React.useState(1);
+export default function ImageEditor({ imageUrl, uploadedImageId, originalImageId, imageFile }) {
+  const [parentTab, setParentTab] = React.useState("firefly");
+  const [fireflyTab, setFireflyTab] = React.useState("generate");
 
   return (
     <View
@@ -44,28 +27,53 @@ export default function ImageEditor({ imageUrl, uploadedImageId, originalImageId
       <Flex direction="column" alignItems="center" justifyContent="center" gap="size-200">
         <Heading level={3}>Edit an Image</Heading>
 
+        {/* Parent Tabs: Firefly vs Photoshop */}
         <Tabs
-          aria-label="Image Manipulation Options"
-          items={tabs}
-          onSelectionChange={setTabId}
+          aria-label="Image Editing Categories"
+          selectedKey={parentTab}
+          onSelectionChange={setParentTab}
         >
           <TabList>
-            {(item) => (
-              <Item key={item.id}>
-                {item.name}
-              </Item>
-            )}
+            <Item key="firefly">Firefly</Item>
+            <Item key="photoshop">Photoshop</Item>
           </TabList>
 
           <TabPanels>
-            {(item) => (
-              <Item key={item.id}>
-                {item.children}
-              </Item>
-            )}
+            {/* Firefly Tab Panel with Sub-tabs */}
+            <Item key="firefly">
+              <Tabs
+                aria-label="Firefly Tools"
+                selectedKey={fireflyTab}
+                onSelectionChange={setFireflyTab}
+              >
+                <TabList>
+                  <Item key="generate">Generate from Reference</Item>
+                  <Item key="fill">Fill Background</Item>
+                  <Item key="expand">Expand Background</Item>
+                </TabList>
+
+                <TabPanels>
+                  <Item key="generate">
+                    <GenerateImage uploadedImageId={uploadedImageId} originalImageId={originalImageId} />
+                  </Item>
+                  <Item key="fill">
+                    <FillImage uploadedImageId={uploadedImageId} originalImageId={originalImageId} />
+                  </Item>
+                  <Item key="expand">
+                    <ExpandImage uploadedImageId={uploadedImageId} originalImageId={originalImageId} />
+                  </Item>
+                </TabPanels>
+              </Tabs>
+            </Item>
+
+            {/* Photoshop Tab Panel */}
+            <Item key="photoshop">
+              <PerformActions inputImageFile={imageFile} originalImageId={originalImageId} />
+            </Item>
           </TabPanels>
         </Tabs>
 
+        {/* Always show original uploaded image */}
         <Image
           src={imageUrl}
           alt="Uploaded Image"

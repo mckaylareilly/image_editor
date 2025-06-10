@@ -1,7 +1,7 @@
 import { Heading, View, FileTrigger, Button, Flex, Text } from "@adobe/react-spectrum";
 import { useState } from "react";
 
-export default function ImageUpload({ setImageUrl, setUploadedImageId, setOriginalImageId }) {
+export default function ImageUpload({ setImageUrl, setUploadedImageId, setOriginalImageId, setUploadedFile }) {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
@@ -10,6 +10,7 @@ export default function ImageUpload({ setImageUrl, setUploadedImageId, setOrigin
     if (files.length === 0) return;
 
     const file = files[0];
+    setUploadedFile(file);
 
     // Check if the file is an image
     if (!file.type.startsWith("image/")) {
@@ -52,7 +53,7 @@ export default function ImageUpload({ setImageUrl, setUploadedImageId, setOrigin
         if (fireflyResponse.ok) {
           const fireflyData = await fireflyResponse.json();
           console.log("Image sent to Firefly API for processing:", fireflyData);
-          setUploadedImageId(fireflyData.image_id);
+          setUploadedImageId(fireflyData.image_id, file);
         } else {
           console.error("Failed to send image to Firefly API");
         }

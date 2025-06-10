@@ -6,4 +6,6 @@ Rails.application.routes.draw do
   post 'upload_image', to: 'firefly#upload_image'
   post 'generate_image', to: 'firefly#generate_image'
   post 'fill_image', to: 'firefly#fill_image'
+
+  post 'perform_actions', to: 'photoshop#perform_actions'
 end
