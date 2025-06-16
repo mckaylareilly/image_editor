@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { View, Image, Text, TextField, Button, Flex } from "@adobe/react-spectrum";
-import ImageUpload from "../ImageUpload";
-import useSaveTransformedImage from "../../hooks/useSaveTransformedImage";
+import ImageUpload from "../../ImageUpload";
+import useSaveTransformedImage from "../../../hooks/useSaveTransformedImage";
 
 export default function FillImage({ uploadedImageId, originalImageId }) {
   const [filledImage, setFilledImage] = useState(null);

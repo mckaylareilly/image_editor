@@ -2,15 +2,15 @@ class FireflyController < ApplicationController
     before_action :get_token
   
     def get_token
-      @client_id = 'c2e303e975b4411f8c6b04f3cfc47e23'
-      client_secret = 'p8e-ndlKdIpt9ajGDsb3jud2-WClgZhf_DHH'
+      @client_id = ENV.fetch('ADOBE_CLIENT_ID')
+      client_secret = ENV.fetch('ADOBE_CLIENT_SECRET')
   
       begin
         response = RestClient.post('https://ims-na1.adobelogin.com/ims/token/v3', {
           client_id: @client_id,
           client_secret: client_secret,
           grant_type: 'client_credentials',
-          scope: 'openid, AdobeID, session, additional_info, read_organizations, firefly_api, ff_apis'
+          scope: 'openid, AdobeID, read_organizations, firefly_api, ff_apis, creative_sdk'
         })
   
         json_response = JSON.parse(response.body)
@@ -93,7 +93,7 @@ class FireflyController < ApplicationController
           "numVariations" => 1,
           "seeds" => [0],
           "size" => { "width" => 2048, "height" => 2048 },
-          "prompt" => prompt, # Use the prompt parameter passed from the front end
+          "prompt" => prompt, 
           "contentClass" => "photo",
           "visualIntensity" => 2,
           "structure" => {
@@ -114,6 +114,69 @@ class FireflyController < ApplicationController
           render json: result
         else
           render json: { error: response.body }, status: :unprocessable_entity
+        end
+      end
+
+      def generate_custom_model_image
+        # Setup the HTTP request to start the generation
+        uri = URI.parse("https://firefly-api.adobe.io/v3/images/generate-async")
+        http = Net::HTTP.new(uri.host, uri.port)
+        http.use_ssl = true
+      
+        req = Net::HTTP::Post.new(uri.path)
+        req["Authorization"] = "Bearer #{@bearer_token}"
+        req["x-api-key"] = @client_id
+        req["Content-Type"] = "application/json"
+        req["x-model-version"] = "image4_custom"
+      
+        permitted_params = params.require(:firefly).permit(:prompt)
+      
+        prompt = permitted_params[:prompt]
+      
+        body = {
+          "prompt" => prompt,
+          "contentClass" => "photo",
+          "customModelId" => "urn:aaid:sc:VA6C2:baf71dd5-653c-448a-bbed-b8b80aaf2220",
+        }.to_json
+      
+        req.body = body
+        initial_response = http.request(req)
+      
+        unless initial_response.is_a?(Net::HTTPSuccess)
+          render json: { error: initial_response.body }, status: :unprocessable_entity
+          return
+        end
+      
+        # Parse job ID from the response
+        json_response = JSON.parse(initial_response.body)
+        job_id = json_response["jobId"]
+      
+        unless job_id
+          render json: { error: 'Could not extract job_id' }, status: :unprocessable_entity
+          return
+        end
+      
+        # Wait for the job to complete
+        status = wait_for_firefly_job(job_id)
+      
+        if status["status"].to_s.downcase == "succeeded"
+          image_url = status.dig("result", "outputs", 0, "image", "url")
+      
+          if image_url
+            render json: {
+              message: 'Image generation succeeded',
+              image_url: image_url,
+              job_id: job_id
+            }
+          else
+            render json: { error: "Job succeeded but no image URL found." }, status: :unprocessable_entity
+          end
+        else
+          render json: {
+            message: 'Job did not complete in time or failed',
+            job_id: job_id,
+            last_status: status
+          }, status: :request_timeout
         end
       end
 
@@ -185,5 +248,53 @@ class FireflyController < ApplicationController
         else
             render json: { error: response.body }, status: :unprocessable_entity
         end
+      end
+
+      private
+
+      def call_api(uri, body)
+        url = URI.parse(uri)
+        http = Net::HTTP.new(url.host, url.port)
+        http.use_ssl = true
+    
+        req = Net::HTTP::Post.new(url.path)
+        req['Authorization'] = "Bearer #{@bearer_token}"
+        req['x-api-key'] = @client_id
+        req['Content-Type'] = 'application/json'
+        req.body = body
+    
+        response = http.request(req)
+        JSON.parse(response.body)
+      end
+
+      def wait_for_firefly_job(job_id)
+        max_retries = 3600
+        retries = 0
+      
+        loop do
+          status_response = get_status(job_id)
+          current_status = status_response['status']&.downcase
+      
+          Rails.logger.info("[Firefly] Job #{job_id} status: #{current_status || 'unknown'}, retry #{retries}/#{max_retries}")
+      
+          return status_response if current_status == 'succeeded' || current_status == 'failed' || retries >= max_retries
+      
+          sleep 2
+          retries += 1
+        end
+      end
+
+      def get_status(job_id)
+        url = URI.parse("https://firefly-api.adobe.io/v3/status/#{job_id}")
+        http = Net::HTTP.new(url.host, url.port)
+        http.use_ssl = true
+      
+        req = Net::HTTP::Get.new(url.request_uri) 
+        req['Authorization'] = "Bearer #{@bearer_token}"
+        req['x-api-key'] = @client_id
+        req['Content-Type'] = 'application/json'
+      
+        response = http.request(req)
+        JSON.parse(response.body)
       end
   end

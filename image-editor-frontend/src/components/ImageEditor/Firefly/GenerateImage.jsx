@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { View, Image, Text, TextField, Button } from "@adobe/react-spectrum";
-import useSaveTransformedImage from "../../hooks/useSaveTransformedImage";
+import useSaveTransformedImage from "../../../hooks/useSaveTransformedImage";
 
 export default function GenerateImage({ uploadedImageId, originalImageId }) {
   const [generatedImage, setGeneratedImage] = useState(null);

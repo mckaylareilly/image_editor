@@ -4,7 +4,7 @@ import ImageUpload from "../components/ImageUpload";
 import ImageEditor from "../components/ImageEditor/ImageEditor";
 
 export default function EditImage({ imageUrl, setImageUrl }) { 
-    const [uploadedImageId, setUploadedImageId] = useState(null); // ✅ Correctly store uploaded image ID
+    const [uploadedImageId, setUploadedImageId] = useState(null);
     const [originalImageId, setOriginalImageId] = useState(null);
     const [uploadedFile, setUploadedFile] = useState(null);
 

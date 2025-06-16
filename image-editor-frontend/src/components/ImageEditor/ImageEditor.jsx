@@ -1,13 +1,17 @@
 import React from "react";
 import { View, Image, Flex, Heading, Tabs, TabList, TabPanels, Item } from "@adobe/react-spectrum";
-import GenerateImage from "./GenerateImage";
-import FillImage from "./FillImage";
-import ExpandImage from "./ExpandImage";
-import PerformActions from "./PerformActions";
+import GenerateImage from "./Firefly/GenerateImage";
+import FillImage from "./Firefly/FillImage";
+import ExpandImage from "./Firefly/ExpandImage";
+import PerformActions from "./Photoshop/PerformActions";
+import PerformActionJson from './Photoshop/PerformActionJson'
+import GenerateCustomModelImage from "./Firefly/GenerateCustomModelImage";
 
 export default function ImageEditor({ imageUrl, uploadedImageId, originalImageId, imageFile }) {
   const [parentTab, setParentTab] = React.useState("firefly");
   const [fireflyTab, setFireflyTab] = React.useState("generate");
+  const [photoshopTab, setPhotoshopTab] = React.useState('apply'); 
+
 
   return (
     <View
@@ -39,38 +43,60 @@ export default function ImageEditor({ imageUrl, uploadedImageId, originalImageId
           </TabList>
 
           <TabPanels>
-            {/* Firefly Tab Panel with Sub-tabs */}
-            <Item key="firefly">
-              <Tabs
-                aria-label="Firefly Tools"
-                selectedKey={fireflyTab}
-                onSelectionChange={setFireflyTab}
-              >
-                <TabList>
-                  <Item key="generate">Generate from Reference</Item>
-                  <Item key="fill">Fill Background</Item>
-                  <Item key="expand">Expand Background</Item>
-                </TabList>
+  {/* Firefly Tab Panel with Sub-tabs */}
+  <Item key="firefly">
+    <Tabs
+      aria-label="Firefly Tools"
+      selectedKey={fireflyTab}
+      onSelectionChange={setFireflyTab}
+    >
+      <TabList>
+        <Item key="generate">Generate from Reference</Item>
+        <Item key="fill">Fill Background</Item>
+        <Item key="expand">Expand Background</Item>
+        <Item key="generate-custom">Generate Image from Custom Model</Item>
+      </TabList>
 
-                <TabPanels>
-                  <Item key="generate">
-                    <GenerateImage uploadedImageId={uploadedImageId} originalImageId={originalImageId} />
-                  </Item>
-                  <Item key="fill">
-                    <FillImage uploadedImageId={uploadedImageId} originalImageId={originalImageId} />
-                  </Item>
-                  <Item key="expand">
-                    <ExpandImage uploadedImageId={uploadedImageId} originalImageId={originalImageId} />
-                  </Item>
-                </TabPanels>
-              </Tabs>
-            </Item>
+      <TabPanels>
+        <Item key="generate">
+          <GenerateImage uploadedImageId={uploadedImageId} originalImageId={originalImageId} />
+        </Item>
+        <Item key="fill">
+          <FillImage uploadedImageId={uploadedImageId} originalImageId={originalImageId} />
+        </Item>
+        <Item key="expand">
+          <ExpandImage uploadedImageId={uploadedImageId} originalImageId={originalImageId} />
+        </Item>
+        <Item key="generate-custom">
+          <GenerateCustomModelImage uploadedImageId={uploadedImageId} originalImageId={originalImageId} />
+        </Item>
+      </TabPanels>
+    </Tabs>
+  </Item>
 
-            {/* Photoshop Tab Panel */}
-            <Item key="photoshop">
-              <PerformActions inputImageFile={imageFile} originalImageId={originalImageId} />
-            </Item>
-          </TabPanels>
+  {/* Photoshop Tab Panel with Sub-tabs */}
+  <Item key="photoshop">
+    <Tabs
+      aria-label="Photoshop Tools"
+      selectedKey={photoshopTab}
+      onSelectionChange={setPhotoshopTab}
+    >
+      <TabList>
+        <Item key="apply">Apply Actions</Item>
+        <Item key="apply-json">Apply Actions JSON</Item>
+      </TabList>
+
+      <TabPanels>
+        <Item key="apply">
+          <PerformActions inputImageFile={imageFile} originalImageId={originalImageId} />
+        </Item>
+        <Item key="apply-json">
+          <PerformActionJson inputImageFile={imageFile} originalImageId={originalImageId} />
+        </Item>
+      </TabPanels>
+    </Tabs>
+  </Item>
+</TabPanels>
         </Tabs>
 
         {/* Always show original uploaded image */}

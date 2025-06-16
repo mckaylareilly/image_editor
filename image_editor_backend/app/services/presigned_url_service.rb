@@ -21,7 +21,7 @@ class PresignedUrlService
         @presigner.presigned_url(:get_object, bucket: @bucket, key: key, expires_in: 3600)
       end
       
-      def generate_urls
+      def generate_action_urls
         input_key = generate_key("inputs", "jpg")
         action_key = generate_key("actions", "atn")
         output_key = generate_key("outputs", "jpg")
