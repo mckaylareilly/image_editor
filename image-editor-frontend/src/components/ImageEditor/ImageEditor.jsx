@@ -6,6 +6,7 @@ import ExpandImage from "./Firefly/ExpandImage";
 import PerformActions from "./Photoshop/PerformActions";
 import PerformActionJson from './Photoshop/PerformActionJson'
 import GenerateCustomModelImage from "./Firefly/GenerateCustomModelImage";
+import RemoveBackground from "./Photoshop/RemoveBackground";
 
 export default function ImageEditor({ imageUrl, uploadedImageId, originalImageId, imageFile }) {
   const [parentTab, setParentTab] = React.useState("firefly");
@@ -84,6 +85,8 @@ export default function ImageEditor({ imageUrl, uploadedImageId, originalImageId
       <TabList>
         <Item key="apply">Apply Actions</Item>
         <Item key="apply-json">Apply Actions JSON</Item>
+        <Item key="remove_background">Remove Background</Item>
+
       </TabList>
 
       <TabPanels>
@@ -92,6 +95,9 @@ export default function ImageEditor({ imageUrl, uploadedImageId, originalImageId
         </Item>
         <Item key="apply-json">
           <PerformActionJson inputImageFile={imageFile} originalImageId={originalImageId} />
+        </Item>
+        <Item key="remove_background">
+          <RemoveBackground inputImageFile={imageFile} originalImageId={originalImageId} />
         </Item>
       </TabPanels>
     </Tabs>

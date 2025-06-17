@@ -4,8 +4,8 @@ require 'rest-client'
 
 class PresignedUrlService
     def initialize
-      @s3_client = Aws::S3::Resource.new(region: 'us-east-1') # Change region if needed
-      @bucket = ENV.fetch('S3_BUCKET_NAME')
+      @s3_client = Aws::S3::Resource.new(region: 'us-east-1') 
+      @bucket = ENV['S3_BUCKET_NAME']
       @presigner = Aws::S3::Presigner.new(client: @s3_client.client)
     end
 

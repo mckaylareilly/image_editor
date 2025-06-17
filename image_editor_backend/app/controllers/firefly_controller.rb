@@ -2,8 +2,8 @@ class FireflyController < ApplicationController
     before_action :get_token
   
     def get_token
-      @client_id = ENV.fetch('ADOBE_CLIENT_ID')
-      client_secret = ENV.fetch('ADOBE_CLIENT_SECRET')
+      @client_id = ENV['ADOBE_CLIENT_ID']
+      client_secret = ENV['ADOBE_CLIENT_SECRET']
   
       begin
         response = RestClient.post('https://ims-na1.adobelogin.com/ims/token/v3', {
