@@ -33,7 +33,7 @@ export default function GenerateImage({ uploadedImageId, originalImageId }) {
       const data = await response.json();
 
       if (data.outputs[0].image.url) {
-        setGeneratedImage(data.outputs[0].image.url);
+        setImageUrl(data.outputs[0].image.url);
       } else {
         setError("Image generation failed.");
       }
@@ -48,12 +48,10 @@ export default function GenerateImage({ uploadedImageId, originalImageId }) {
     <View marginTop="size-400" width="100%" maxWidth="500px" alignSelf="center">
       <TextField label="Enter a prompt" value={prompt} onChange={setPrompt} isRequired />
       {error && <Text align="center" color="negative">{error}</Text>}
-      
-      {generatedImage && <Image src={generatedImage} alt="Generated Image" width="100%" height="auto" objectFit="contain" />}
-      
+            
       <View marginTop="size-200" alignSelf="center">
         <Button onPress={generateImage} isDisabled={loading}>{loading ? "Generating..." : "Generate Image"}</Button>
-        {generatedImage && <Button onPress={() => saveTransformedImage(generatedImage, originalImageId)} isDisabled={saving}>{saving ? "Saving..." : "Save Image"}</Button>}
+        <Button onPress={() => saveTransformedImage(imageUrl, originalImageId)} isDisabled={saving}>{saving ? "Saving..." : "Save Image"}</Button>
       </View>
     </View>
   );

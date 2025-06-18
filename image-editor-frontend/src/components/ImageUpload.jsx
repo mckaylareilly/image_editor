@@ -29,6 +29,7 @@ export default function ImageUpload({ setImageUrl, setUploadedImageId, setOrigin
       const response = await fetch("http://localhost:3000/images", {
         method: "POST",
         body: formData,
+        credentials: 'include',
       });
 
       if (response.ok) {

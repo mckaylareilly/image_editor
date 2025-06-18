@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Image, Flex, Heading, Tabs, TabList, TabPanels, Item } from "@adobe/react-spectrum";
+import { View, Image, Flex, Heading, Tabs, TabList, TabPanels, Item, Button } from "@adobe/react-spectrum";
 import GenerateImage from "./Firefly/GenerateImage";
 import FillImage from "./Firefly/FillImage";
 import ExpandImage from "./Firefly/ExpandImage";
@@ -7,8 +7,9 @@ import PerformActions from "./Photoshop/PerformActions";
 import PerformActionJson from './Photoshop/PerformActionJson'
 import GenerateCustomModelImage from "./Firefly/GenerateCustomModelImage";
 import RemoveBackground from "./Photoshop/RemoveBackground";
+import CreateMask from "./Photoshop/CreateMask";
 
-export default function ImageEditor({ imageUrl, uploadedImageId, originalImageId, imageFile }) {
+export default function ImageEditor({ imageUrl, setImageUrl, uploadedImageId, originalImageId, imageFile }) {
   const [parentTab, setParentTab] = React.useState("firefly");
   const [fireflyTab, setFireflyTab] = React.useState("generate");
   const [photoshopTab, setPhotoshopTab] = React.useState('apply'); 
@@ -60,16 +61,16 @@ export default function ImageEditor({ imageUrl, uploadedImageId, originalImageId
 
       <TabPanels>
         <Item key="generate">
-          <GenerateImage uploadedImageId={uploadedImageId} originalImageId={originalImageId} />
+          <GenerateImage setImageUrl={setImageUrl} imageUrl={imageUrl} uploadedImageId={uploadedImageId} originalImageId={originalImageId} />
         </Item>
         <Item key="fill">
-          <FillImage uploadedImageId={uploadedImageId} originalImageId={originalImageId} />
+          <FillImage setImageUrl={setImageUrl} imageUrl={imageUrl} uploadedImageId={uploadedImageId} originalImageId={originalImageId} />
         </Item>
         <Item key="expand">
-          <ExpandImage uploadedImageId={uploadedImageId} originalImageId={originalImageId} />
+          <ExpandImage setImageUrl={setImageUrl} imageUrl={imageUrl} uploadedImageId={uploadedImageId} originalImageId={originalImageId} />
         </Item>
         <Item key="generate-custom">
-          <GenerateCustomModelImage uploadedImageId={uploadedImageId} originalImageId={originalImageId} />
+          <GenerateCustomModelImage setImageUrl={setImageUrl} imageUrl={imageUrl} uploadedImageId={uploadedImageId} originalImageId={originalImageId} />
         </Item>
       </TabPanels>
     </Tabs>
@@ -86,18 +87,22 @@ export default function ImageEditor({ imageUrl, uploadedImageId, originalImageId
         <Item key="apply">Apply Actions</Item>
         <Item key="apply-json">Apply Actions JSON</Item>
         <Item key="remove_background">Remove Background</Item>
+        <Item key="create_mask">Create Mask</Item>
 
       </TabList>
 
       <TabPanels>
         <Item key="apply">
-          <PerformActions inputImageFile={imageFile} originalImageId={originalImageId} />
+          <PerformActions setImageUrl={setImageUrl} imageUrl={imageUrl} inputImageFile={imageFile} originalImageId={originalImageId} />
         </Item>
         <Item key="apply-json">
-          <PerformActionJson inputImageFile={imageFile} originalImageId={originalImageId} />
+          <PerformActionJson setImageUrl={setImageUrl} imageUrl={imageUrl} inputImageFile={imageFile} originalImageId={originalImageId} />
         </Item>
         <Item key="remove_background">
-          <RemoveBackground inputImageFile={imageFile} originalImageId={originalImageId} />
+          <RemoveBackground setImageUrl={setImageUrl} imageUrl={imageUrl} inputImageFile={imageFile} originalImageId={originalImageId} />
+        </Item>
+        <Item key="create_mask">
+          <CreateMask setImageUrl={setImageUrl} imageUrl={imageUrl} inputImageFile={imageFile} originalImageId={originalImageId} />
         </Item>
       </TabPanels>
     </Tabs>
@@ -105,7 +110,6 @@ export default function ImageEditor({ imageUrl, uploadedImageId, originalImageId
 </TabPanels>
         </Tabs>
 
-        {/* Always show original uploaded image */}
         <Image
           src={imageUrl}
           alt="Uploaded Image"

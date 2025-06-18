@@ -35,7 +35,7 @@ export default function GenerateCustomModelImage({ uploadedImageId, originalImag
       const data = await response.json();
 
       if (data.image_url) {
-        setGeneratedImage(data.image_url);
+        setImageUrl(data.image_url);
       } else {
         setError("Image generation failed: No image URL returned.");
       }
@@ -51,22 +51,11 @@ export default function GenerateCustomModelImage({ uploadedImageId, originalImag
       <TextField label="Enter a prompt" value={prompt} onChange={setPrompt} isRequired />
       {error && <Text align="center" color="negative">{error}</Text>}
 
-      {generatedImage && (
-        <Image
-          src={generatedImage}
-          alt="Generated Image"
-          width="100%"
-          height="auto"
-          objectFit="contain"
-        />
-      )}
-
       <View marginTop="size-200" alignSelf="center">
         <Button onPress={generateImage} isDisabled={loading}>
           {loading ? "Generating..." : "Generate Image"}
         </Button>
 
-        {generatedImage && (
           <Button
             onPress={() => saveTransformedImage(generatedImage, originalImageId)}
             isDisabled={saving || isSaving}
@@ -75,7 +64,6 @@ export default function GenerateCustomModelImage({ uploadedImageId, originalImag
           >
             {saving || isSaving ? "Saving..." : "Save Image"}
           </Button>
-        )}
       </View>
     </View>
   );

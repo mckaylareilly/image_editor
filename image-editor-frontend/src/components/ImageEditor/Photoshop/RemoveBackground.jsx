@@ -2,7 +2,7 @@ import { useState } from "react";
 import { View, Text, TextField, Button, Image, Flex } from "@adobe/react-spectrum";
 import useSaveTransformedImage from "../../../hooks/useSaveTransformedImage";
 
-export default function RemoveBackground({ inputImageFile, originalImageId }) {
+export default function RemoveBackground({ imageUrl, setImageUrl, inputImageFile, originalImageId }) {
   const [outputImageUrl, setOutputImageUrl] = useState(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -26,6 +26,7 @@ export default function RemoveBackground({ inputImageFile, originalImageId }) {
       const res = await fetch("http://localhost:3000/remove_background", {
         method: "POST",
         body: formData,
+        credentials: 'include',
       });
 
       const data = await res.json();
@@ -33,7 +34,7 @@ export default function RemoveBackground({ inputImageFile, originalImageId }) {
       if (!res.ok) {
         setError(data.error || "Error performing Photoshop Remove Background.");
       } else {
-        setOutputImageUrl(data.output_url);
+        setImageUrl(data.output_url);
       }
     } catch (err) {
       setError(err.message);
@@ -43,9 +44,9 @@ export default function RemoveBackground({ inputImageFile, originalImageId }) {
   };
 
   const handleSave = async () => {
-    if (!outputImageUrl || !originalImageId) return;
+    if (!imageUrl || !originalImageId) return;
     setSaving(true);
-    await saveTransformedImage(outputImageUrl, originalImageId);
+    await saveTransformedImage(imageUrl, originalImageId);
     setSaving(false);
   };
 
@@ -57,16 +58,7 @@ export default function RemoveBackground({ inputImageFile, originalImageId }) {
           {loading ? "Processing..." : "Remove Background"}
         </Button>
 
-        {outputImageUrl && (
           <View marginTop="size-400" alignSelf="center">
-            <Text>Processed Image:</Text>
-            <Image
-              src={outputImageUrl}
-              alt="Processed Output"
-              width="100%"
-              objectFit="contain"
-              marginTop="size-200"
-            />
             <Button
               onPress={handleSave}
               isDisabled={saving}
@@ -75,7 +67,6 @@ export default function RemoveBackground({ inputImageFile, originalImageId }) {
               {saving ? "Saving..." : "Save Image"}
             </Button>
           </View>
-        )}
       </Flex>
     </View>
   );

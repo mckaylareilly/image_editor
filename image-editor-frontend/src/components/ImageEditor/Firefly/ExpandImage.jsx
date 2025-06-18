@@ -35,7 +35,7 @@ export default function ExpandImage({ uploadedImageId, originalImageId }) {
       const data = await response.json();
 
       if (data.expanded_image_url) {
-        setExpandedImage(data.expanded_image_url);
+        setImageUrl(data.expanded_image_url);
       } else {
         setError("Image expansion failed.");
       }
@@ -51,12 +51,10 @@ export default function ExpandImage({ uploadedImageId, originalImageId }) {
       <TextField label="Width" value={width} onChange={setWidth} isRequired />
       <TextField label="Height" value={height} onChange={setHeight} isRequired />
       {error && <Text align="center" color="negative">{error}</Text>}
-      
-      {expandedImage && <Image src={expandedImage} alt="Expanded Image" width="100%" height="auto" objectFit="contain" />}
-      
+            
       <View marginTop="size-200" alignSelf="center">
         <Button onPress={expandImage} isDisabled={loading}>{loading ? "Expanding..." : "Expand Image"}</Button>
-        {expandedImage && <Button onPress={() => saveTransformedImage(expandedImage, originalImageId)} isDisabled={saving}>{saving ? "Saving..." : "Save Image"}</Button>}
+        {expandedImage && <Button onPress={() => saveTransformedImage(imageUrl, originalImageId)} isDisabled={saving}>{saving ? "Saving..." : "Save Image"}</Button>}
       </View>
     </View>
   );

@@ -1,28 +1,29 @@
 class PhotoshopController < ApplicationController
-    before_action :get_token
-    before_action :set_aws_service
-  
-    def get_token
-      @client_id = ENV['ADOBE_CLIENT_ID']
-      client_secret = ENV['ADOBE_CLIENT_SECRET']
-  
-      begin
-        response = RestClient.post('https://ims-na1.adobelogin.com/ims/token/v3', {
-          client_id: @client_id,
-          client_secret: client_secret,
-          grant_type: 'client_credentials',
-          scope: 'openid, AdobeID, read_organizations, firefly_api, ff_apis, creative_sdk'
-        })
-  
-        json_response = JSON.parse(response.body)
-        @bearer_token = json_response['access_token']
-      rescue RestClient::ExceptionWithResponse => e
-        render json: { error: 'Unable to fetch token', details: e.response }, status: :unauthorized
-      end
+    @aws_service = PresignedUrlService.new
+
+    def self.aws_service
+      @aws_service
     end
 
-    def set_aws_service
-      @aws_service = PresignedUrlService.new
+    def bearer_token
+      unless session[:bearer_token]
+        session[:client_id] = ENV['ADOBE_CLIENT_ID']
+        client_secret = ENV['ADOBE_CLIENT_SECRET']
+    
+        begin
+          response = RestClient.post('https://ims-na1.adobelogin.com/ims/token/v3', {
+            client_id: session[:client_id],
+            client_secret: client_secret,
+            grant_type: 'client_credentials',
+            scope: 'openid, AdobeID, read_organizations, firefly_api, ff_apis, creative_sdk'
+          })
+          json_response = JSON.parse(response.body)
+          session[:bearer_token] = json_response['access_token']
+        rescue RestClient::ExceptionWithResponse => e
+          render json: { error: 'Unable to fetch token', details: e.response }, status: :unauthorized and return
+        end
+      end
+      session[:bearer_token]
     end
   
     def perform_action_json
@@ -36,8 +37,10 @@ class PhotoshopController < ApplicationController
       begin
         urls = generate_action_json_urls
   
-        @aws_service.upload_to_presigned_url(urls[:input][:put_url], input_file)
-        
+        if session[:input_url].blank?
+          self.class.aws_service.upload_to_presigned_url(urls[:input][:put_url], input_file)
+        end
+
         url = 'https://image.adobe.io/pie/psdService/actionJSON'
         body = {
           inputs: [{ href: urls[:input][:get_url], storage: "external" }],
@@ -46,7 +49,7 @@ class PhotoshopController < ApplicationController
         "_obj": "imageSize",
         "constrainProportions": true,
         "interfaceIconFrameDimmed": {
-          "_enum": "interpolationType",
+          "_enum": "interpolation aType",
           "_value": "automaticInterpolation"
         },
         "scaleStyles": true
@@ -107,7 +110,7 @@ class PhotoshopController < ApplicationController
           return
         end
         
-        status = wait_for_photoshop_job(job_id)
+        status = wait_for_photoshop_job(job_id, urls)
   
         if status.dig("outputs", 0, "status").to_s.downcase == "succeeded"
           render json: {
@@ -139,8 +142,8 @@ class PhotoshopController < ApplicationController
       begin
         urls = generate_input_output_urls
   
-        @aws_service.upload_to_presigned_url(urls[:input][:put_url], input_file)
-        @aws_service.upload_to_presigned_url(urls[:action][:put_url], actions_file)
+        self.class.aws_service.upload_to_presigned_url(urls[:input][:put_url], input_file) unless session[:input_url]
+        self.class.aws_service.upload_to_presigned_url(urls[:action][:put_url], actions_file)
         
         url = 'https://image.adobe.io/pie/psdService/photoshopActions'
         body = {
@@ -159,7 +162,7 @@ class PhotoshopController < ApplicationController
           return
         end
         
-        status = wait_for_photoshop_job(job_id)
+        status = wait_for_photoshop_job(job_id, urls)
   
         if status.dig("outputs", 0, "status").to_s.downcase == "succeeded"
           render json: {
@@ -190,7 +193,7 @@ class PhotoshopController < ApplicationController
       begin
         urls = generate_input_output_urls
   
-        @aws_service.upload_to_presigned_url(urls[:input][:put_url], input_file)
+        self.class.aws_service.upload_to_presigned_url(urls[:input][:put_url], input_file) unless session[:input_url]
         
         url = 'https://image.adobe.io/sensei/cutout'
         body = {
@@ -214,7 +217,63 @@ class PhotoshopController < ApplicationController
           return
         end
         
-        status = wait_for_photoshop_mask_job(job_id)
+        status = wait_for_photoshop_mask_job(job_id, urls)
+  
+        if status['status']&.downcase == "succeeded"
+          session[:input_url] = urls[:output][:get_url]
+          render json: {
+            message: 'Photoshop remove background succeeded',
+            output_url: urls[:output][:get_url]
+          }
+        else
+          render json: {
+            message: 'Job did not complete in time',
+            job_id: job_id,
+            last_status: status
+          }, status: :request_timeout
+        end
+      rescue => e
+        Rails.logger.error "Photoshop perform_actions error: #{e.message}\n#{e.backtrace.join("\n")}"
+        render json: { error: 'Server error', details: e.message }, status: :internal_server_error
+      end
+    end
+
+    def create_mask
+      input_file = params[:input_file]
+  
+      if input_file.blank?
+        render json: { error: 'Missing input or actions file' }, status: :bad_request
+        return
+      end
+  
+      begin
+        urls = generate_input_output_urls
+  
+        self.class.aws_service.upload_to_presigned_url(urls[:input][:put_url], input_file) unless session[:input_url]
+        
+        url = 'https://image.adobe.io/sensei/mask'
+        body = {
+          input: {
+            href: urls[:input][:get_url],
+            storage: "external"
+          },
+          output: {
+            href: urls[:output][:put_url],
+            storage: "external"
+          }
+        }.to_json
+
+        adobe_response = call_api(url, body)
+  
+        job_href = adobe_response.dig('_links', 'self', 'href')
+        job_id = job_href&.split('/')&.last
+  
+        unless job_id
+          render json: { error: 'Could not extract job_id' }, status: :unprocessable_entity
+          return
+        end
+        
+        status = wait_for_photoshop_mask_job(job_id, urls)
   
         if status['status']&.downcase == "succeeded"
           render json: {
@@ -242,8 +301,8 @@ class PhotoshopController < ApplicationController
       http.use_ssl = true
   
       req = Net::HTTP::Post.new(url.path)
-      req['Authorization'] = "Bearer #{@bearer_token}"
-      req['x-api-key'] = @client_id
+      req['Authorization'] = "Bearer #{bearer_token}"
+      req['x-api-key'] = session[:client_id]
       req['Content-Type'] = 'application/json'
       req.body = body
   
@@ -252,50 +311,91 @@ class PhotoshopController < ApplicationController
     end
 
     def generate_action_json_urls
-      input_key = @aws_service.generate_key("inputs", "jpg")
-      action_key = @aws_service.generate_key("actions", "atn")
-      output_key = @aws_service.generate_key("outputs", "jpg")
+      aws = self.class.aws_service
+    
+      input_key = if session[:input_url]
+        aws.extract_key_from_url(session[:input_url])
+      else
+        aws.generate_key("inputs", "jpg")
+      end
+    
+      action_key = aws.generate_key("actions", "atn")
+      output_key = aws.generate_key("outputs", "jpg")
     
       {
-        input: { key: input_key, put_url: @aws_service.generate_put_url(input_key), get_url: @aws_service.generate_get_url(input_key) },
-        action: { key: action_key, put_url: @aws_service.generate_put_url(action_key), get_url: @aws_service.generate_get_url(action_key) },
-        output: { key: output_key, put_url: @aws_service.generate_put_url(output_key), get_url: @aws_service.generate_get_url(output_key) }
+        input: {
+          key: input_key,
+          put_url: aws.generate_put_url(input_key),
+          get_url: aws.generate_get_url(input_key)
+        },
+        action: {
+          key: action_key,
+          put_url: aws.generate_put_url(action_key),
+          get_url: aws.generate_get_url(action_key)
+        },
+        output: {
+          key: output_key,
+          put_url: aws.generate_put_url(output_key),
+          get_url: aws.generate_get_url(output_key)
+        }
       }
     end
 
     def generate_input_output_urls
-      input_key = @aws_service.generate_key("inputs", "jpg")
-      output_key = @aws_service.generate_key("outputs", "jpg")
+      aws = self.class.aws_service
+    
+      input_url = session[:input_url]
+      reuse_previous = input_url.present?
+    
+      input_key = reuse_previous ? aws.extract_key_from_url(input_url) : aws.generate_key("inputs", "jpg")
+      output_key = aws.generate_key("outputs", "jpg")
     
       {
-        input: { key: input_key, put_url: @aws_service.generate_put_url(input_key), get_url: @aws_service.generate_get_url(input_key) },
-        output: { key: output_key, put_url: @aws_service.generate_put_url(output_key), get_url: @aws_service.generate_get_url(output_key) }
+        reuse_previous: reuse_previous,
+        input: {
+          key: input_key,
+          put_url: aws.generate_put_url(input_key),
+          get_url: aws.generate_get_url(input_key)
+        },
+        output: {
+          key: output_key,
+          put_url: aws.generate_put_url(output_key),
+          get_url: aws.generate_get_url(output_key)
+        }
       }
     end
-  
-    def wait_for_photoshop_job(job_id)
+
+    def wait_for_photoshop_job(job_id, urls)
       max_retries = 30
       retries = 0
-  
+    
       loop do
         status_response = get_status(job_id)
-        current_status = status_response['outputs']&.first&.dig('status')&.downcase
-        return status_response if current_status == 'succeeded' || retries >= max_retries
-  
+        current_status = status_response.dig("outputs", 0, "status")&.downcase
+    
+        if current_status == 'succeeded' || retries >= max_retries
+          session[:input_url] = urls[:output][:get_url]
+          return status_response
+        end
+    
         sleep 2
         retries += 1
       end
     end
-
-    def wait_for_photoshop_mask_job(job_id)
+    
+    def wait_for_photoshop_mask_job(job_id, urls)
       max_retries = 30
       retries = 0
-  
+    
       loop do
         status_response = get_mask_status(job_id)
         current_status = status_response['status']&.downcase
-        return status_response if current_status == 'succeeded' || retries >= max_retries
-  
+    
+        if current_status == 'succeeded' || retries >= max_retries
+          session[:input_url] = urls[:output][:get_url]
+          return status_response
+        end
+    
         sleep 2
         retries += 1
       end
@@ -307,8 +407,8 @@ class PhotoshopController < ApplicationController
       http.use_ssl = true
     
       req = Net::HTTP::Get.new(url.path)
-      req['Authorization'] = "Bearer #{@bearer_token}"
-      req['x-api-key'] = @client_id
+      req['Authorization'] = "Bearer #{bearer_token}"
+      req['x-api-key'] = session[:client_id]
       req['Content-Type'] = 'application/json'
     
       response = http.request(req)
@@ -322,8 +422,8 @@ class PhotoshopController < ApplicationController
       http.use_ssl = true
     
       req = Net::HTTP::Get.new(url.path)
-      req['Authorization'] = "Bearer #{@bearer_token}"
-      req['x-api-key'] = @client_id
+      req['Authorization'] = "Bearer #{bearer_token}"
+      req['x-api-key'] = session[:client_id]
       req['Content-Type'] = 'application/json'
     
       response = http.request(req)

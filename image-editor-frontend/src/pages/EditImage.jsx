@@ -17,7 +17,12 @@ export default function EditImage({ imageUrl, setImageUrl }) {
             setOriginalImageId={setOriginalImageId}
             setUploadedFile={setUploadedFile}
           />
-          {imageUrl && <ImageEditor imageUrl={imageUrl} uploadedImageId={uploadedImageId} originalImageId={originalImageId}  imageFile={uploadedFile}/>}
+          {imageUrl && <ImageEditor imageUrl={imageUrl}
+                          setImageUrl={setImageUrl} 
+                          uploadedImageId={uploadedImageId} 
+                          originalImageId={originalImageId}  
+                          imageFile={uploadedFile}
+                          />}
         </Flex>
       </View>
     );  

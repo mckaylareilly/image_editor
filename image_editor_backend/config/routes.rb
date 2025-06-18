@@ -12,6 +12,7 @@ Rails.application.routes.draw do
   post 'perform_actions', to: 'photoshop#perform_actions'
   post 'perform_action_json', to: 'photoshop#perform_action_json'
   post 'remove_background', to: 'photoshop#remove_background'
+  post 'create_mask', to: 'photoshop#create_mask'
 
 
 end

@@ -3,7 +3,7 @@ import { View, Text, TextField, Button, Image, Flex } from "@adobe/react-spectru
 import ActionsUpload from "./ActionsUpload";
 import useSaveTransformedImage from "../../../hooks/useSaveTransformedImage";
 
-export default function PerformActions({ inputImageFile, originalImageId }) {
+export default function PerformActions({ imageUrl, setImageUrl, inputImageFile, originalImageId }) {
   const [actionsFile, setActionsFile] = useState(null);
   const [outputImageUrl, setOutputImageUrl] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -29,6 +29,7 @@ export default function PerformActions({ inputImageFile, originalImageId }) {
       const res = await fetch("http://localhost:3000/perform_actions", {
         method: "POST",
         body: formData,
+        credentials: 'include',
       });
 
       const data = await res.json();
@@ -36,7 +37,7 @@ export default function PerformActions({ inputImageFile, originalImageId }) {
       if (!res.ok) {
         setError(data.error || "Error performing Photoshop action.");
       } else {
-        setOutputImageUrl(data.output_url);
+        setImageUrl(data.output_url);
       }
     } catch (err) {
       setError(err.message);
@@ -46,9 +47,9 @@ export default function PerformActions({ inputImageFile, originalImageId }) {
   };
 
   const handleSave = async () => {
-    if (!outputImageUrl || !originalImageId) return;
+    if (!imageUrl || !originalImageId) return;
     setSaving(true);
-    await saveTransformedImage(outputImageUrl, originalImageId);
+    await saveTransformedImage(imageUrl, originalImageId);
     setSaving(false);
   };
 
@@ -67,16 +68,8 @@ export default function PerformActions({ inputImageFile, originalImageId }) {
           {loading ? "Processing..." : "Perform Actions"}
         </Button>
 
-        {outputImageUrl && (
+   
           <View marginTop="size-400" alignSelf="center">
-            <Text>Processed Image:</Text>
-            <Image
-              src={outputImageUrl}
-              alt="Processed Output"
-              width="100%"
-              objectFit="contain"
-              marginTop="size-200"
-            />
             <Button
               onPress={handleSave}
               isDisabled={saving}
@@ -85,7 +78,6 @@ export default function PerformActions({ inputImageFile, originalImageId }) {
               {saving ? "Saving..." : "Save Image"}
             </Button>
           </View>
-        )}
       </Flex>
     </View>
   );

@@ -13,9 +13,14 @@ class PresignedUrlService
       "#{type}/#{SecureRandom.uuid}.#{ext}"
     end
 
+    def extract_key_from_url(url)
+        uri = URI.parse(url)
+        uri.path[1..] # remove leading '/'
+    end
+
     def generate_put_url(key)
         @presigner.presigned_url(:put_object, bucket: @bucket, key: key, expires_in: 3600)
-      end
+    end
       
       def generate_get_url(key)
         @presigner.presigned_url(:get_object, bucket: @bucket, key: key, expires_in: 3600)
