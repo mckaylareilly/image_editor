@@ -5,9 +5,7 @@ import useSaveTransformedImage from "../../../hooks/useSaveTransformedImage";
 
 export default function PerformActions({ imageUrl, setImageUrl, inputImageFile, originalImageId }) {
   const [actionsFile, setActionsFile] = useState(null);
-  const [outputImageUrl, setOutputImageUrl] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
   const { saveTransformedImage } = useSaveTransformedImage();
@@ -48,9 +46,7 @@ export default function PerformActions({ imageUrl, setImageUrl, inputImageFile, 
 
   const handleSave = async () => {
     if (!imageUrl || !originalImageId) return;
-    setSaving(true);
     await saveTransformedImage(imageUrl, originalImageId);
-    setSaving(false);
   };
 
   return (
@@ -72,10 +68,9 @@ export default function PerformActions({ imageUrl, setImageUrl, inputImageFile, 
           <View marginTop="size-400" alignSelf="center">
             <Button
               onPress={handleSave}
-              isDisabled={saving}
               marginTop="size-200"
             >
-              {saving ? "Saving..." : "Save Image"}
+              {"Save Image"}
             </Button>
           </View>
       </Flex>

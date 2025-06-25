@@ -1,7 +1,7 @@
 import { Heading, View, FileTrigger, Button, Flex, Text } from "@adobe/react-spectrum";
 import { useState } from "react";
 
-export default function ImageUpload({ setImageUrl, setUploadedImageId, setOriginalImageId, setUploadedFile }) {
+export default function ImageUpload({ setImageUrl, setOriginalImageId }) {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
@@ -10,7 +10,6 @@ export default function ImageUpload({ setImageUrl, setUploadedImageId, setOrigin
     if (files.length === 0) return;
 
     const file = files[0];
-    setUploadedFile(file);
 
     // Check if the file is an image
     if (!file.type.startsWith("image/")) {
@@ -20,6 +19,8 @@ export default function ImageUpload({ setImageUrl, setUploadedImageId, setOrigin
 
     const formData = new FormData();
     formData.append("image[file]", file);
+     const formDataFirefly = new FormData();
+     formDataFirefly.append("image_file", file);
 
     setIsUploading(true);
     setErrorMessage("");
@@ -31,30 +32,21 @@ export default function ImageUpload({ setImageUrl, setUploadedImageId, setOrigin
         body: formData,
         credentials: 'include',
       });
-
+      
       if (response.ok) {
         setUploadSuccess(true);
         const data = await response.json();
         setOriginalImageId(data.id);
         console.log("Image uploaded successfully:", data);
 
-        setImageUrl(data.imageUrl);
-
-        // Call the Firefly API to upload image to Fireflu
         const fireflyResponse = await fetch("http://localhost:3000/upload_image", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            imageUrl: data.imageUrl,
-          }),
+          body: formDataFirefly
         });
 
         if (fireflyResponse.ok) {
           const fireflyData = await fireflyResponse.json();
-          console.log("Image sent to Firefly API for processing:", fireflyData);
-          setUploadedImageId(fireflyData.image_id, file);
+          setImageUrl(fireflyData.input_url);
         } else {
           console.error("Failed to send image to Firefly API");
         }

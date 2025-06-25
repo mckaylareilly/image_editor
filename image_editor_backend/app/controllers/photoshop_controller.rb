@@ -1,3 +1,5 @@
+require 'mini_magick'
+
 class PhotoshopController < ApplicationController
     @aws_service = PresignedUrlService.new
 
@@ -27,103 +29,100 @@ class PhotoshopController < ApplicationController
     end
   
     def perform_action_json
-      input_file = params[:input_file]
+      input_url = params[:input_url]
   
-      if input_file.blank?
-        render json: { error: 'Missing input or actions file' }, status: :bad_request
+      if input_url.blank?
+        render json: { error: 'Missing image' }, status: :bad_request
         return
       end
   
       begin
-        urls = generate_action_json_urls
-  
-        if session[:input_url].blank?
-          self.class.aws_service.upload_to_presigned_url(urls[:input][:put_url], input_file)
-        end
+        urls = generate_input_output_urls
 
         url = 'https://image.adobe.io/pie/psdService/actionJSON'
         body = {
-          inputs: [{ href: urls[:input][:get_url], storage: "external" }],
+          inputs: [{ href: input_url, storage: "external" }],
           "options": {
-    "actionJSON": [{
-        "_obj": "imageSize",
-        "constrainProportions": true,
-        "interfaceIconFrameDimmed": {
-          "_enum": "interpolation aType",
-          "_value": "automaticInterpolation"
-        },
-        "scaleStyles": true
-      }, {
-        "_obj": "imageSize",
-        "constrainProportions": true,
-        "interfaceIconFrameDimmed": {
-          "_enum": "interpolationType",
-          "_value": "automaticInterpolation"
-        },
-        "resolution": {
-          "_unit": "densityUnit",
-          "_value": 72.0
-        },
-        "scaleStyles": true
+            "actionJSON": [{
+              "_obj": "invert",
+              "_target": [
+                {
+                  "_ref": "layer",
+                  "_enum": "ordinal",
+                  "_value": "targetEnum"
+                }
+            ],
+          }, {
+            "_obj": "imageSize",
+            "constrainProportions": true,
+            "interfaceIconFrameDimmed": {
+              "_enum": "interpolationType",
+              "_value": "automaticInterpolation"
+            },
+            "resolution": {
+              "_unit": "densityUnit",
+              "_value": 72.0
+            },
+            "scaleStyles": true
+          },
+          {
+            "_obj": "make",
+            "_target": [{
+               "_ref": "adjustmentLayer"
+            }],
+            "using": {
+              "_obj": "adjustmentLayer",
+              "type": {
+                "_obj": "blackAndWhite",
+                "blue": 20,
+                "cyan": 60,
+                "grain": 40,
+                "magenta": 80,
+                "presetKind": {
+                  "_enum": "presetKindType",
+                  "_value": "presetKindDefault"
+                },
+                "red": 40,
+                "tintColor": {
+                  "_obj": "RGBColor",
+                  "blue": 179.00115966796876,
+                  "grain": 211.00067138671876,
+                  "red": 225.00045776367188
+                },
+                "useTint": false,
+                "yellow": 60
+              }
+            }
+          }
+        ]
       },
-      {
-        "_obj": "make",
-        "_target": [{
-          "_ref": "adjustmentLayer"
-        }],
-        "using": {
-          "_obj": "adjustmentLayer",
-          "type": {
-            "_obj": "blackAndWhite",
-            "blue": 20,
-            "cyan": 60,
-            "grain": 40,
-            "magenta": 80,
-            "presetKind": {
-              "_enum": "presetKindType",
-              "_value": "presetKindDefault"
-            },
-            "red": 40,
-            "tintColor": {
-              "_obj": "RGBColor",
-              "blue": 179.00115966796876,
-              "grain": 211.00067138671876,
-              "red": 225.00045776367188
-            },
-            "useTint": false,
-            "yellow": 60
-          }
-        }
-      }
-    ]
-  },
-   outputs: [{ href: urls[:output][:put_url], storage: "external", type: "image/jpeg" }]
-        }.to_json
+      outputs: [{ href: urls[:output][:put_url], storage: "external", type: "image/jpeg" }]
+      }.to_json
 
-        adobe_response = call_api(url, body)
+      adobe_response = call_api(url, body)
   
-        job_href = adobe_response.dig('_links', 'self', 'href')
-        job_id = job_href&.split('/')&.last
+      job_href = adobe_response.dig('_links', 'self', 'href')
+      job_id = job_href&.split('/')&.last
   
-        unless job_id
-          render json: { error: 'Could not extract job_id' }, status: :unprocessable_entity
-          return
-        end
+      unless job_id
+        render json: { error: 'Could not extract job_id' }, status: :unprocessable_entity
+        return
+      end
         
-        status = wait_for_photoshop_job(job_id, urls)
+      status = wait_for_photoshop_job(job_id, urls)
   
-        if status.dig("outputs", 0, "status").to_s.downcase == "succeeded"
-          render json: {
-            message: 'Photoshop action succeeded',
-            output_url: urls[:output][:get_url]
-          }
-        else
-          render json: {
-            message: 'Job did not complete in time',
-            job_id: job_id,
-            last_status: status
-          }, status: :request_timeout
-        end
+      if status.dig("outputs", 0, "status").to_s.downcase == "succeeded"
+        render json: {
+          message: 'Photoshop action succeeded',
+          output_url: urls[:output][:get_url]
+        }
+      else
+        render json: {
+          message: 'Job did not complete in time',
+          job_id: job_id,
+          last_status: status
+        }, status: :request_timeout
+      end
       rescue => e
         Rails.logger.error "Photoshop perform_actions error: #{e.message}\n#{e.backtrace.join("\n")}"
         render json: { error: 'Server error', details: e.message }, status: :internal_server_error
@@ -131,24 +130,24 @@ class PhotoshopController < ApplicationController
     end
   
     def perform_actions
-      input_file = params[:input_file]
+      input_url = params[:input_url]
       actions_file = params[:actions_file]
   
-      if input_file.blank? || actions_file.blank?
+      if input_url.blank? || actions_file.blank?
         render json: { error: 'Missing input or actions file' }, status: :bad_request
         return
       end
   
       begin
         urls = generate_input_output_urls
+        action_urls = generate_input_urls
   
-        self.class.aws_service.upload_to_presigned_url(urls[:input][:put_url], input_file) unless session[:input_url]
-        self.class.aws_service.upload_to_presigned_url(urls[:action][:put_url], actions_file)
+        self.class.aws_service.upload_to_presigned_url(action_urls[:input][:put_url], actions_file)
         
         url = 'https://image.adobe.io/pie/psdService/photoshopActions'
         body = {
-          inputs: [{ href: urls[:input][:get_url], storage: "external" }],
-          options: { actions: [{ href: urls[:action][:get_url], storage: "external" }] },
+          inputs: [{ href: input_url, storage: "external" }],
+          options: { actions: [{ href: action_urls[:input][:get_url], storage: "external" }] },
           outputs: [{ href: urls[:output][:put_url], storage: "external", type: "image/jpeg" }]
         }.to_json
 
@@ -183,22 +182,20 @@ class PhotoshopController < ApplicationController
     end
 
     def remove_background
-      input_file = params[:input_file]
+      input_url = params[:input_url]
   
-      if input_file.blank?
-        render json: { error: 'Missing input or actions file' }, status: :bad_request
+      if input_url.blank?
+        render json: { error: 'Missing image' }, status: :bad_request
         return
       end
   
       begin
         urls = generate_input_output_urls
-  
-        self.class.aws_service.upload_to_presigned_url(urls[:input][:put_url], input_file) unless session[:input_url]
-        
+          
         url = 'https://image.adobe.io/sensei/cutout'
         body = {
           input: {
-            href: urls[:input][:get_url],
+            href: params[:input_url],
             storage: "external"
           },
           output: {
@@ -220,7 +217,6 @@ class PhotoshopController < ApplicationController
         status = wait_for_photoshop_mask_job(job_id, urls)
   
         if status['status']&.downcase == "succeeded"
-          session[:input_url] = urls[:output][:get_url]
           render json: {
             message: 'Photoshop remove background succeeded',
             output_url: urls[:output][:get_url]
@@ -239,22 +235,20 @@ class PhotoshopController < ApplicationController
     end
 
     def create_mask
-      input_file = params[:input_file]
-  
-      if input_file.blank?
-        render json: { error: 'Missing input or actions file' }, status: :bad_request
+      input_url = params[:input_url]
+    
+      if input_url.blank?
+        render json: { error: 'Missing image' }, status: :bad_request
         return
       end
-  
+    
       begin
         urls = generate_input_output_urls
-  
-        self.class.aws_service.upload_to_presigned_url(urls[:input][:put_url], input_file) unless session[:input_url]
-        
+    
         url = 'https://image.adobe.io/sensei/mask'
         body = {
           input: {
-            href: urls[:input][:get_url],
+            href: input_url,
             storage: "external"
           },
           output: {
@@ -262,23 +256,49 @@ class PhotoshopController < ApplicationController
             storage: "external"
           }
         }.to_json
-
+    
         adobe_response = call_api(url, body)
-  
+    
         job_href = adobe_response.dig('_links', 'self', 'href')
         job_id = job_href&.split('/')&.last
-  
+    
         unless job_id
           render json: { error: 'Could not extract job_id' }, status: :unprocessable_entity
           return
         end
-        
+    
         status = wait_for_photoshop_mask_job(job_id, urls)
-  
+    
         if status['status']&.downcase == "succeeded"
+          # Step 1: Download the generated mask image
+          downloaded = URI.open(urls[:output][:get_url])
+          original_tempfile = Tempfile.new(['mask_original', '.jpg'])
+          original_tempfile.binmode
+          original_tempfile.write(downloaded.read)
+          original_tempfile.rewind
+    
+          # Step 2: Invert using MiniMagick
+          inverted_tempfile = Tempfile.new(['mask_inverted', '.jpg'])
+          image = MiniMagick::Image.read(original_tempfile)
+          image.negate
+          image.write(inverted_tempfile.path)
+    
+          # Step 3: Upload inverted image to a new presigned URL
+          inverted_urls = generate_input_urls
+          inverted_get_url = inverted_urls[:input][:get_url]
+          inverted_put_url = inverted_urls[:input][:put_url]
+    
+          content_type = Marcel::MimeType.for(inverted_tempfile) || "image/jpeg"
+          inverted_uploaded_file = ActionDispatch::Http::UploadedFile.new(
+            tempfile: inverted_tempfile,
+            filename: "inverted_mask.jpg",
+            type: content_type
+          )
+          self.class.aws_service.upload_to_presigned_url(inverted_put_url, inverted_uploaded_file)
+    
           render json: {
-            message: 'Photoshop remove background succeeded',
-            output_url: urls[:output][:get_url]
+            message: 'Photoshop create mask succeeded',
+            output_url: inverted_get_url
           }
         else
           render json: {
@@ -307,31 +327,29 @@ class PhotoshopController < ApplicationController
       req.body = body
   
       response = http.request(req)
-      JSON.parse(response.body)
+      response_json = JSON.parse(response.body)
+
+      if response_json["error_code"] == "401013"
+        session[:bearer_token] = nil
+      else
+        response_json
+      end
     end
 
-    def generate_action_json_urls
+    def generate_input_output_urls
       aws = self.class.aws_service
     
-      input_key = if session[:input_url]
-        aws.extract_key_from_url(session[:input_url])
-      else
-        aws.generate_key("inputs", "jpg")
-      end
-    
-      action_key = aws.generate_key("actions", "atn")
-      output_key = aws.generate_key("outputs", "jpg")
+      input_key = uuid = SecureRandom.uuid
+      output_key = uuid = SecureRandom.uuid
+
+      input_key = "inputs/#{uuid}.jpg"
+      output_key = "outputs/#{uuid}.jpg"
     
       {
         input: {
           key: input_key,
           put_url: aws.generate_put_url(input_key),
           get_url: aws.generate_get_url(input_key)
-        },
-        action: {
-          key: action_key,
-          put_url: aws.generate_put_url(action_key),
-          get_url: aws.generate_get_url(action_key)
         },
         output: {
           key: output_key,
@@ -341,26 +359,17 @@ class PhotoshopController < ApplicationController
       }
     end
 
-    def generate_input_output_urls
+    def generate_input_urls
       aws = self.class.aws_service
     
-      input_url = session[:input_url]
-      reuse_previous = input_url.present?
-    
-      input_key = reuse_previous ? aws.extract_key_from_url(input_url) : aws.generate_key("inputs", "jpg")
-      output_key = aws.generate_key("outputs", "jpg")
-    
+      input_key = uuid = SecureRandom.uuid
+
+      input_key = "inputs/#{uuid}.jpg"    
       {
-        reuse_previous: reuse_previous,
         input: {
           key: input_key,
-          put_url: aws.generate_put_url(input_key),
-          get_url: aws.generate_get_url(input_key)
-        },
-        output: {
-          key: output_key,
-          put_url: aws.generate_put_url(output_key),
-          get_url: aws.generate_get_url(output_key)
+          put_url: aws.generate_put_url(input_key, expires_in: 86400),
+          get_url: aws.generate_get_url(input_key, expires_in: 86400)
         }
       }
     end
@@ -393,6 +402,7 @@ class PhotoshopController < ApplicationController
     
         if current_status == 'succeeded' || retries >= max_retries
           session[:input_url] = urls[:output][:get_url]
+
           return status_response
         end
     

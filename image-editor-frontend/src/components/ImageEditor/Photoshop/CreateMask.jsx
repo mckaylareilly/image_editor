@@ -1,15 +1,12 @@
 import { useState } from "react";
-import { View, Text, TextField, Button, Image, Flex } from "@adobe/react-spectrum";
-import useSaveTransformedImage from "../../../hooks/useSaveTransformedImage";
+import { View, Button, Flex } from "@adobe/react-spectrum";
 
-export default function CreateMask({ setImageUrl, inputImageFile, originalImageId }) {
-  const [outputImageUrl, setOutputImageUrl] = useState(null);
+export default function CreateMask({ setMaskUrl, imageUrl }) {
   const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
-  const handleRemoveBackground = async () => {
-    if (!inputImageFile) {
+  const handleCreateMask = async () => {
+    if (!imageUrl) {
       setError("Please upload an image file.");
       return;
     }
@@ -18,7 +15,7 @@ export default function CreateMask({ setImageUrl, inputImageFile, originalImageI
     setError(null);
 
     const formData = new FormData();
-    formData.append("input_file", inputImageFile);
+    formData.append("input_url", imageUrl);
 
     try {
       const res = await fetch("http://localhost:3000/create_mask", {
@@ -32,7 +29,7 @@ export default function CreateMask({ setImageUrl, inputImageFile, originalImageI
       if (!res.ok) {
         setError(data.error || "Error performing Photoshop Remove Background.");
       } else {
-        setImageUrl(data.output_url);
+        setMaskUrl(data.output_url);
       }
     } catch (err) {
       setError(err.message);
@@ -44,8 +41,9 @@ export default function CreateMask({ setImageUrl, inputImageFile, originalImageI
   return (
     <View width="100%" marginTop="size-400">
       <Flex direction="column" alignItems="center" gap="size-200" maxWidth="500px" marginX="auto">
-
-        <Button onPress={handleRemoveBackground} isDisabled={loading}>
+        {error && <Text align="center" color="negative">{error}</Text>}
+        
+        <Button onPress={handleCreateMask} isDisabled={loading}>
           {loading ? "Processing..." : "Create Mask"}
         </Button>
       </Flex>

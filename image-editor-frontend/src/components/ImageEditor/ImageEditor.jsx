@@ -1,6 +1,5 @@
 import React from "react";
 import { View, Image, Flex, Heading, Tabs, TabList, TabPanels, Item, Button } from "@adobe/react-spectrum";
-import GenerateImage from "./Firefly/GenerateImage";
 import FillImage from "./Firefly/FillImage";
 import ExpandImage from "./Firefly/ExpandImage";
 import PerformActions from "./Photoshop/PerformActions";
@@ -9,7 +8,7 @@ import GenerateCustomModelImage from "./Firefly/GenerateCustomModelImage";
 import RemoveBackground from "./Photoshop/RemoveBackground";
 import CreateMask from "./Photoshop/CreateMask";
 
-export default function ImageEditor({ imageUrl, setImageUrl, uploadedImageId, originalImageId, imageFile }) {
+export default function ImageEditor({ imageUrl, setImageUrl, originalImageId, maskUrl, setMaskUrl }) {
   const [parentTab, setParentTab] = React.useState("firefly");
   const [fireflyTab, setFireflyTab] = React.useState("generate");
   const [photoshopTab, setPhotoshopTab] = React.useState('apply'); 
@@ -53,24 +52,20 @@ export default function ImageEditor({ imageUrl, setImageUrl, uploadedImageId, or
       onSelectionChange={setFireflyTab}
     >
       <TabList>
-        <Item key="generate">Generate from Reference</Item>
         <Item key="fill">Fill Background</Item>
         <Item key="expand">Expand Background</Item>
         <Item key="generate-custom">Generate Image from Custom Model</Item>
       </TabList>
 
       <TabPanels>
-        <Item key="generate">
-          <GenerateImage setImageUrl={setImageUrl} imageUrl={imageUrl} uploadedImageId={uploadedImageId} originalImageId={originalImageId} />
-        </Item>
         <Item key="fill">
-          <FillImage setImageUrl={setImageUrl} imageUrl={imageUrl} uploadedImageId={uploadedImageId} originalImageId={originalImageId} />
+          <FillImage setImageUrl={setImageUrl} imageUrl={imageUrl} maskUrl={maskUrl} originalImageId={originalImageId} />
         </Item>
         <Item key="expand">
-          <ExpandImage setImageUrl={setImageUrl} imageUrl={imageUrl} uploadedImageId={uploadedImageId} originalImageId={originalImageId} />
+          <ExpandImage setImageUrl={setImageUrl} imageUrl={imageUrl} originalImageId={originalImageId} />
         </Item>
         <Item key="generate-custom">
-          <GenerateCustomModelImage setImageUrl={setImageUrl} imageUrl={imageUrl} uploadedImageId={uploadedImageId} originalImageId={originalImageId} />
+          <GenerateCustomModelImage setImageUrl={setImageUrl} imageUrl={imageUrl} originalImageId={originalImageId} />
         </Item>
       </TabPanels>
     </Tabs>
@@ -93,16 +88,16 @@ export default function ImageEditor({ imageUrl, setImageUrl, uploadedImageId, or
 
       <TabPanels>
         <Item key="apply">
-          <PerformActions setImageUrl={setImageUrl} imageUrl={imageUrl} inputImageFile={imageFile} originalImageId={originalImageId} />
+          <PerformActions setImageUrl={setImageUrl} imageUrl={imageUrl} originalImageId={originalImageId} />
         </Item>
         <Item key="apply-json">
-          <PerformActionJson setImageUrl={setImageUrl} imageUrl={imageUrl} inputImageFile={imageFile} originalImageId={originalImageId} />
+          <PerformActionJson setImageUrl={setImageUrl} imageUrl={imageUrl} originalImageId={originalImageId} />
         </Item>
         <Item key="remove_background">
-          <RemoveBackground setImageUrl={setImageUrl} imageUrl={imageUrl} inputImageFile={imageFile} originalImageId={originalImageId} />
+          <RemoveBackground setImageUrl={setImageUrl} imageUrl={imageUrl} originalImageId={originalImageId} />
         </Item>
         <Item key="create_mask">
-          <CreateMask setImageUrl={setImageUrl} imageUrl={imageUrl} inputImageFile={imageFile} originalImageId={originalImageId} />
+          <CreateMask setImageUrl={setImageUrl} imageUrl={imageUrl} originalImageId={originalImageId} setMaskUrl={setMaskUrl} />
         </Item>
       </TabPanels>
     </Tabs>

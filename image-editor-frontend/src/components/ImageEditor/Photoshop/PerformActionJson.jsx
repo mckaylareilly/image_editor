@@ -1,17 +1,15 @@
 import { useState } from "react";
-import { View, Text, TextField, Button, Image, Flex } from "@adobe/react-spectrum";
+import { View, Button, Flex } from "@adobe/react-spectrum";
 import useSaveTransformedImage from "../../../hooks/useSaveTransformedImage";
 
 export default function PerformActionJson({ imageUrl, setImageUrl, inputImageFile, originalImageId }) {
-  const [outputImageUrl, setOutputImageUrl] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
   const { saveTransformedImage } = useSaveTransformedImage();
 
   const handlePerformActions = async () => {
-    if (!inputImageFile) {
+    if (!imageUrl) {
       setError("Please upload an image file.");
       return;
     }
@@ -20,7 +18,7 @@ export default function PerformActionJson({ imageUrl, setImageUrl, inputImageFil
     setError(null);
 
     const formData = new FormData();
-    formData.append("input_file", inputImageFile);
+    formData.append("input_url", imageUrl);
 
     try {
       const res = await fetch("http://localhost:3000/perform_action_json", {
@@ -45,27 +43,24 @@ export default function PerformActionJson({ imageUrl, setImageUrl, inputImageFil
 
   const handleSave = async () => {
     if (!imageUrl || !originalImageId) return;
-    setSaving(true);
     await saveTransformedImage(imageUrl, originalImageId);
-    setSaving(false);
   };
 
   return (
     <View width="100%" marginTop="size-400">
       <Flex direction="column" alignItems="center" gap="size-200" maxWidth="500px" marginX="auto">
-
+        {error && <Text align="center" color="negative">{error}</Text>}
+        
         <Button onPress={handlePerformActions} isDisabled={loading}>
           {loading ? "Processing..." : "Perform Actions"}
         </Button>
-
    
           <View marginTop="size-400" alignSelf="center">
             <Button
               onPress={handleSave}
-              isDisabled={saving}
               marginTop="size-200"
             >
-              {saving ? "Saving..." : "Save Image"}
+              {"Save Image"}
             </Button>
           </View>
       </Flex>

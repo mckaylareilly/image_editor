@@ -3,46 +3,42 @@ import { View, Image, Text, TextField, Button, Flex } from "@adobe/react-spectru
 import ImageUpload from "../../ImageUpload";
 import useSaveTransformedImage from "../../../hooks/useSaveTransformedImage";
 
-export default function FillImage({ uploadedImageId, originalImageId, setImageUrl }) {
-  const [filledImage, setFilledImage] = useState(null);
+export default function FillImage({ originalImageId, setImageUrl, imageUrl, maskUrl }) {
   const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [prompt, setPrompt] = useState("");
-  const [maskId, setMaskId] = useState(null);
   
   const { saveTransformedImage, isSaving } = useSaveTransformedImage();
 
-  // Update the maskId when a new image is uploaded through ImageUpload
-  const handleMaskUpload = (id) => {
-    setMaskId(id);
-  };
-
   const fillImage = async () => {
-    if (!maskId || !prompt) {
-      setError("Please upload a mask image and provide a prompt.");
+    if (!prompt || !imageUrl || !maskUrl) {
+      setError("Please upload a mask image, and a base image, and provide a prompt.");
       return;
     }
 
     setLoading(true);
     setError(null);
 
+    const formData = new FormData();
+    formData.append("input_url", imageUrl);
+    formData.append("mask_url", maskUrl);
+    formData.append("prompt", prompt);
+
+
     // Call the Rails API to fill an image
     try {
       const response = await fetch("http://localhost:3000/fill_image", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          firefly: { mask_id: maskId, source_id: uploadedImageId, prompt },
-        }),
+        body: formData,
+        credentials: "include"
       });
 
       if (!response.ok) throw new Error("Failed to fill image");
 
       const data = await response.json();
 
-      if (data.filled_image_url) {
-        setImageUrl(data.filled_image_url);
+      if (data.image_url) {
+        setImageUrl(data.image_url);
       } else {
         setError("Image fill failed.");
       }
@@ -55,11 +51,6 @@ export default function FillImage({ uploadedImageId, originalImageId, setImageUr
 
   return (
     <View marginTop="size-400" width="100%" maxWidth="500px" alignSelf="center">
-      <ImageUpload 
-        setImageUrl={setImageUrl} 
-        setUploadedImageId={handleMaskUpload} 
-        setOriginalImageId={() => {}} 
-      />
       <TextField 
         label="Prompt" 
         value={prompt} 
@@ -73,8 +64,8 @@ export default function FillImage({ uploadedImageId, originalImageId, setImageUr
           {loading ? "Filling Image..." : "Fill Image"}
         </Button>
    
-          <Button onPress={() => saveTransformedImage(imageUrl, originalImageId)} isDisabled={saving}>
-            {saving ? "Saving..." : "Save Image"}
+          <Button onPress={() => saveTransformedImage(imageUrl, originalImageId)}>
+            {"Save Image"}
           </Button>
       </View>
     </View>

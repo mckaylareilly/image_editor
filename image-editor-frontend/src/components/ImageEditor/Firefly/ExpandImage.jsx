@@ -2,10 +2,8 @@ import { useState } from "react";
 import { View, Image, Text, TextField, Button } from "@adobe/react-spectrum";
 import useSaveTransformedImage from "../../../hooks/useSaveTransformedImage";
 
-export default function ExpandImage({ uploadedImageId, originalImageId }) {
-  const [expandedImage, setExpandedImage] = useState(null);
+export default function ExpandImage({ originalImageId, setImageUrl, imageUrl }) {
   const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [width, setWidth] = useState("");
   const [height, setHeight] = useState("");
@@ -14,28 +12,33 @@ export default function ExpandImage({ uploadedImageId, originalImageId }) {
   
 
   const expandImage = async () => {
-    if (!width || !height) {
-      setError("Please enter both width and height.");
+    if (!width || !height || !imageUrl) {
+      setError("Please enter both width and height, and make sure you uploaded an image");
       return;
     }
 
     setLoading(true);
     setError(null);
 
+    const formData = new FormData();
+    formData.append("input_url", imageUrl);
+    formData.append("width", width);
+    formData.append("height", height);
+
     // Call the Rails API to expand an image
     try {
       const response = await fetch("http://localhost:3000/expand_image", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ firefly: { width, height, firefly_image_id: uploadedImageId } }),
+          body: formData,
+        credentials: "include",
       });
 
       if (!response.ok) throw new Error("Failed to expand image");
 
       const data = await response.json();
 
-      if (data.expanded_image_url) {
-        setImageUrl(data.expanded_image_url);
+      if (data.image_url) {
+        setImageUrl(data.image_url);
       } else {
         setError("Image expansion failed.");
       }
@@ -54,7 +57,7 @@ export default function ExpandImage({ uploadedImageId, originalImageId }) {
             
       <View marginTop="size-200" alignSelf="center">
         <Button onPress={expandImage} isDisabled={loading}>{loading ? "Expanding..." : "Expand Image"}</Button>
-        {expandedImage && <Button onPress={() => saveTransformedImage(imageUrl, originalImageId)} isDisabled={saving}>{saving ? "Saving..." : "Save Image"}</Button>}
+        <Button onPress={() => saveTransformedImage(imageUrl, originalImageId)}>{"Save Image"}</Button>
       </View>
     </View>
   );

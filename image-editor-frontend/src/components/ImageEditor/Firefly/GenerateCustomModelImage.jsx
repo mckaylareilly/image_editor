@@ -3,9 +3,7 @@ import { View, Image, Text, TextField, Button } from "@adobe/react-spectrum";
 import useSaveTransformedImage from "../../../hooks/useSaveTransformedImage";
 
 export default function GenerateCustomModelImage({ uploadedImageId, originalImageId }) {
-  const [generatedImage, setGeneratedImage] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [prompt, setPrompt] = useState("");
 
@@ -24,7 +22,7 @@ export default function GenerateCustomModelImage({ uploadedImageId, originalImag
       const response = await fetch("http://localhost:3000/generate_custom_model_image", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ firefly: { prompt } }),
+        body: JSON.stringify(prompt),
       });
 
       if (!response.ok) {
@@ -57,12 +55,11 @@ export default function GenerateCustomModelImage({ uploadedImageId, originalImag
         </Button>
 
           <Button
-            onPress={() => saveTransformedImage(generatedImage, originalImageId)}
-            isDisabled={saving || isSaving}
+            onPress={() => saveTransformedImage(imageUrl, originalImageId)}
             variant="secondary"
             marginStart="size-200"
           >
-            {saving || isSaving ? "Saving..." : "Save Image"}
+            {"Save Image"}
           </Button>
       </View>
     </View>
